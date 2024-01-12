@@ -11,7 +11,7 @@ import numpy as np
 import time
 import sys
 import tqdm.auto as tqdm
-from tests import trajectory as tj
+import trajectory as tj
 
 # f = tj.from_file(r'C:\git\mouse-tracker\tests\tests\linear.gcode')
 # f = tj.variable_feed_circle(30, 100, 20, 1)
@@ -32,7 +32,7 @@ FEED_RATES = 120
 
 
 # Number of cycles
-CYC = 30
+CYC = 1
 
 # Square
 FILLET_RADIUS = 0.4
@@ -45,9 +45,11 @@ SIDE_LENGTH=2.5
 # Lissajous
 f = tj.variable_feed_lissajous(2, 3, np.pi/2,  120, CYC)
 
+print(f)
+
 for line in tqdm.tqdm(f):
     l = line.strip() # Strip all EOL characters for consistency
-    # print('Sending: ' + l)
+    print('Sending: ' + l)
     s.write(bytes(l + '\n', 'UTF-8')) # Send g-code block to grbl
     grbl_out = str(s.readline()) # Wait for grbl response with carriage return
     print(' : ' + grbl_out.strip())
