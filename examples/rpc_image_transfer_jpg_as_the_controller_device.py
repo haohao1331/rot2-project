@@ -4,11 +4,15 @@
 #
 # This script shows off how to transfer the frame buffer to your computer as a jpeg image.
 
-import io, pygame, rpc, serial, serial.tools.list_ports, socket, struct, sys
+import io, pygame, serial, serial.tools.list_ports, socket, struct, sys
+sys.path.append(r'C:\git\rot2-project')
 
+import rpc
 # Fix Python 2.x.
 try: input = raw_input
 except NameError: pass
+
+from time import perf_counter
 
 # The RPC library above is installed on your OpenMV Cam and provides multiple classes for
 # allowing your OpenMV Cam to control over USB or WIFI.
@@ -26,7 +30,8 @@ for port, desc, hwid in serial.tools.list_ports.comports():
     print("{} : {} [{}]".format(port, desc, hwid))
 sys.stdout.write("\nPlease enter a port name: ")
 sys.stdout.flush()
-interface = rpc.rpc_usb_vcp_master(port=input())
+# interface = rpc.rpc_usb_vcp_master(port=input())
+interface = rpc.rpc_usb_vcp_master(port='COM6')
 print("")
 sys.stdout.flush()
 
@@ -92,18 +97,37 @@ def get_frame_buffer_call_back(pixformat_str, framesize_str, cutthrough, silent)
 
     return None
 
-pygame.init()
-screen_w = 640
-screen_h = 480
-try:
-    screen = pygame.display.set_mode((screen_w, screen_h), flags=pygame.RESIZABLE)
-except TypeError:
-    screen = pygame.display.set_mode((screen_w, screen_h))
-pygame.display.set_caption("Frame Buffer")
-clock = pygame.time.Clock()
+pixformat_str = "sensor.RGB565"
+framesize_str = "sensor.QQVGA"
+
+def get_frame_buffer_call_back_fast():
+    result = interface.call("jpeg_image_snapshot", "%s,%s" % (pixformat_str, framesize_str))
+    if result is None: 
+        return
+    
+    size = struct.unpack("<I", result)[0]
+    img = bytearray(size)
+    result = interface.call("jpeg_image_read")
+
+    interface.get_bytes(img, 5000)
+
+    return img
+
+# pygame.init()
+# screen_w = 640
+# screen_h = 480
+# try:
+#     screen = pygame.display.set_mode((screen_w, screen_h), flags=pygame.RESIZABLE)
+# except TypeError:
+#     screen = pygame.display.set_mode((screen_w, screen_h))
+# pygame.display.set_caption("Frame Buffer")
+# clock = pygame.time.Clock()
 
 while(True):
     sys.stdout.flush()
+    
+    start = perf_counter()
+
 
     # You may change the pixformat and the framesize of the image transferred from the remote device
     # by modifying the below arguments.
@@ -114,17 +138,21 @@ while(True):
     # more quickly from one image buffer to another. Note: This works because once an RPC call
     # completes successfully both the master and slave devices are synchronized completely.
     #
-    img = get_frame_buffer_call_back("sensor.RGB565", "sensor.QQVGA", cutthrough=True, silent=True)
-    if img is not None:
-        try:
-            screen.blit(pygame.transform.scale(pygame.image.load(io.BytesIO(img), "jpg"), (screen_w, screen_h)), (0, 0))
-            pygame.display.update()
-            clock.tick()
-        except pygame.error: pass
+    # img = get_frame_buffer_call_back(pixformat_str, framesize_str, cutthrough=True, silent=True)
+    img = get_frame_buffer_call_back_fast()
+    # if img is not None:
+    #     try:
+    #         screen.blit(pygame.transform.scale(pygame.image.load(io.BytesIO(img), "jpg"), (screen_w, screen_h)), (0, 0))
+    #         pygame.display.update()
+    #         clock.tick()
+    #     except pygame.error: pass
 
-    print(clock.get_fps())
+    # print(clock.get_fps())
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            quit()
+    # for event in pygame.event.get():
+    #     if event.type == pygame.QUIT:
+    #         pygame.quit()
+    #         quit()
+
+    end = perf_counter()
+    print(f'{(end - start)*1000:.0f}')

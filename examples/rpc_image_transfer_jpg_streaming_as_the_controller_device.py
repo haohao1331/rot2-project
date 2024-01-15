@@ -4,7 +4,11 @@
 #
 # This script shows off how to transfer the frame buffer to your computer as a jpeg image.
 
-import io, pygame, rpc, serial, serial.tools.list_ports, socket, sys
+import io, pygame, serial, serial.tools.list_ports, socket, sys
+
+sys.path.append(r'C:\git\rot2-project')
+
+import rpc
 
 # Fix Python 2.x.
 try: input = raw_input
@@ -26,7 +30,8 @@ for port, desc, hwid in serial.tools.list_ports.comports():
     print("{} : {} [{}]".format(port, desc, hwid))
 sys.stdout.write("\nPlease enter a port name: ")
 sys.stdout.flush()
-interface = rpc.rpc_usb_vcp_master(port=input())
+# interface = rpc.rpc_usb_vcp_master(port=input())
+interface = rpc.rpc_usb_vcp_master(port='COM6')
 print("")
 sys.stdout.flush()
 
