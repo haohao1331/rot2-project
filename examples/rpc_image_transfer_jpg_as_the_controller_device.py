@@ -102,7 +102,9 @@ framesize_str = "sensor.QQVGA"
 
 def get_frame_buffer_call_back_fast():
     result = interface.call("jpeg_image_snapshot", "%s,%s" % (pixformat_str, framesize_str))
+    print("%s,%s" % (pixformat_str, framesize_str))
     if result is None: 
+        print("Failed to get image.")
         return
     
     size = struct.unpack("<I", result)[0]
@@ -123,10 +125,11 @@ def get_frame_buffer_call_back_fast():
 # pygame.display.set_caption("Frame Buffer")
 # clock = pygame.time.Clock()
 
+prev = perf_counter()
+now = prev
+
 while(True):
     sys.stdout.flush()
-    
-    start = perf_counter()
 
 
     # You may change the pixformat and the framesize of the image transferred from the remote device
@@ -154,5 +157,6 @@ while(True):
     #         pygame.quit()
     #         quit()
 
-    end = perf_counter()
-    print(f'{(end - start)*1000:.0f}')
+    now = perf_counter()
+    print(f'{(now - prev)*1000:.0f}')
+    prev = now
