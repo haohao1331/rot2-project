@@ -13,13 +13,22 @@ class Gantry:
         self.ser.flushInput()
         self.send('G17 G20 G90 G94')
 
-    def send(self, msg : str):
+    def send(self, msg : str, wait_for_ok=False):
         print(f'send: {msg}')
         self.ser.write(bytes(msg + '\n', self.encoding)) # Send g-code block to grbl
-        grbl_out = str(self.ser.readline())
-        ret = grbl_out.strip()
-        print(f'read: {ret}')
-        return ret
+        if wait_for_ok:
+            while True:
+                grbl_out = str(self.ser.readline())
+                ret = grbl_out.strip()
+                print(f'read: {ret}')
+                ok_str = "b'ok\\r\\n'"
+                if ret == ok_str:
+                    return
+        else:
+            grbl_out = str(self.ser.readline())
+            ret = grbl_out.strip()
+            print(f'read: {ret}')
+            return ret
     
     def setup(self, max_rate, accel):
         self.send(f'$110={max_rate}')
@@ -51,5 +60,9 @@ class Gantry:
     
 if __name__ == '__main__':
     gt = Gantry()
-    gt.test()
+    # gt.test()
+    # gt.send('$$', wait_for_ok=True)
+    # gt.send('$?')
+    # gt.send('$G')
+    gt.move_y(1, 60)
     gt.close()
