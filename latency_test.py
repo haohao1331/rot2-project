@@ -11,7 +11,8 @@ from red_or_green import analyze_image_for_red_green
 
 
 output_dir = Path(r'C:\git\rot2-project\data\2024-01-15_camera_pics1')
-delta = 0.1
+delta = 1
+div = 10    # this is so that delta and cur_pos stay as int
 speed = 60
 cur_pos = 0
 
@@ -39,7 +40,8 @@ while(True):
     print(f'{dominant_color}')
 
     cur_pos += delta if dominant_color == 'red' else -delta
-    gt.move_y(cur_pos, speed)
+
+    gt.move_y(cur_pos / div, speed)
 
     # if dominant_color == 'red':
     #     gt.move_x(distance, speed)

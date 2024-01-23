@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import shutil
 
 def analyze_image_for_red_green(image):
+    if type(image) in [Path, str]:
+        image = cv2.imread(str(image))
     # Read the image
     # image = cv2.imread(str(image_path))
 

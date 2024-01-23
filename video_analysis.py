@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 from pathlib import Path
 import matplotlib.pyplot as plt
+from red_or_green import analyze_image_for_red_green
 
 def analyze_video(vid_path : Path, txt_output : Path):
     # Open the video file
@@ -15,7 +16,8 @@ def analyze_video(vid_path : Path, txt_output : Path):
     # Get the number of frames in the video
     num_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    y_loc = []
+    y_loc = np.zeros(num_frames)
+    is_red = np.zeros(num_frames)
 
     # Loop through all the frames
     for i in range(num_frames):
@@ -28,10 +30,16 @@ def analyze_video(vid_path : Path, txt_output : Path):
             return
 
         cx, cy = get_centre_dot_location(frame)
-        y_loc.append(cy)
+        y_loc[i] = cy
+        dominant_color, red_count, green_count, mask_red, mask_green = analyze_image_for_red_green(frame[600:, 0:400, :])
+        is_red[i] = 1 if dominant_color == 'red' else 0
+        print(f'{i} - {cy} - {dominant_color} - {red_count} - {green_count}')
 
-    np.save(r'C:\git\rot2-project\temp', np.array(y_loc))
+    np.save(f'/Users/yefan/Desktop/rot2/rot2-project/temp/y_loc.npy', np.array(y_loc))
     plt.plot(y_loc)
+    plt.show()
+    np.save(f'/Users/yefan/Desktop/rot2/rot2-project/temp/is_red.npy', np.array(is_red))
+    plt.plot(is_red)
     plt.show()
 
     # Release the video capture object
@@ -69,7 +77,7 @@ def get_centre_dot_location(snapshot) -> tuple:
             cx = int(M["m10"] / M["m00"])
             cy = int(M["m01"] / M["m00"])
 
-            print(f'cx: {cx}, cy: {cy}')
+            # print(f'cx: {cx}, cy: {cy}')
             return cx, cy
     return -1, -1
 
@@ -102,13 +110,20 @@ def extract_image_from_movie(movie_path : Path, output_image_path, time_in_secon
     # Release the video capture object
     cap.release()
 
-# Example usage:
-# extract_image_from_movie("path_to_movie.mp4", "output_image.jpg", 10) # Extracts an image at 10 seconds
-
-
 if __name__ == '__main__':
-    vid_path = r'C:\git\rot2-project\data\2024-01-15_video_data\test1-01152024155717-0000.avi'
-    snapshot_path = r'C:\git\rot2-project\data\2024-01-15_video_data\snapshot.jpg'
-    # extract_image_from_movie(vid_path, snapshot_path, 21)
-    # get_centre_dot_location(snapshot_path)
+    vid_path = r'/Users/yefan/Desktop/rot2/rot2-project/data/2024-01-19_video_analysis/test1-01152024155717-0000.avi'
+    # snapshot_path = r'C:\git\rot2-project\data\2024-01-15_video_data\snapshot.jpg'
+    # # extract_image_from_movie(vid_path, snapshot_path, 21)
+    # # get_centre_dot_location(snapshot_path)
     analyze_video(vid_path, None)
+
+    # loc_path = Path('/Users/yefan/Desktop/rot2/rot2-project/temp/temp.npy')
+    # img = cv2.imread('/Users/yefan/Desktop/rot2/rot2-project/data/2024-01-19_video_analysis/snapshot.jpg')
+    # img = img[600:, 0:400, :]
+    # # plt.imshow(img)
+    # # plt.show()
+    # # exit()
+    # dominant_color, red_count, green_count, mask_red, mask_green = analyze_image_for_red_green(img)
+    # print(dominant_color, red_count, green_count)
+
+
