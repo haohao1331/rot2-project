@@ -64,5 +64,5 @@ if __name__ == '__main__':
     # gt.send('$$', wait_for_ok=True)
     # gt.send('$?')
     # gt.send('$G')
-    gt.move_y(1, 60)
+    gt.move_y(-0.5, 60)
     gt.close()

@@ -7,7 +7,7 @@
 import io, pygame, serial, serial.tools.list_ports, socket, struct, sys
 sys.path.append(r'C:\git\rot2-project')
 
-import rpc
+import openmv.rpc as rpc
 # Fix Python 2.x.
 try: input = raw_input
 except NameError: pass

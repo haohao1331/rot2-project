@@ -9,7 +9,7 @@
 # This script shows off how to transfer the frame buffer to your computer as a jpeg image.
 
 import omv
-import rpc
+import openmv.rpc as rpc
 import sensor
 import struct
 

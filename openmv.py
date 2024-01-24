@@ -1,4 +1,4 @@
-import rpc
+import openmv.rpc as rpc
 import struct
 from time import perf_counter
 
