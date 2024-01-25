@@ -55,7 +55,9 @@ def get_centre_dot_location(snapshot) -> tuple:
         img = snapshot
     img_size = img.shape
     # print(img_size)
-    img = img[100:img_size[0]//2 + 200, 100:img_size[1]//2, :]
+    img = img[100:img_size[0]//2 + 200, 300:img_size[1]//2 + 200, :]
+    # plt.imshow(img)
+    # plt.show()
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -111,10 +113,10 @@ def extract_image_from_movie(movie_path : Path, output_image_path, time_in_secon
     cap.release()
 
 if __name__ == '__main__':
-    vid_path = r'/Users/yefan/Desktop/rot2/rot2-project/data/2024-01-19_video_analysis/test1-01152024155717-0000.avi'
-    # snapshot_path = r'C:\git\rot2-project\data\2024-01-15_video_data\snapshot.jpg'
-    # # extract_image_from_movie(vid_path, snapshot_path, 21)
-    # # get_centre_dot_location(snapshot_path)
+    vid_path = '/Users/yefan/Desktop/rot2/rot2-project/data/2024-01-24_latency_test1/test3-01242024104004-0000.avi'
+    snapshot_path = '/Users/yefan/Desktop/rot2/rot2-project/data/2024-01-24_latency_test1/snapshot.jpg'
+    # extract_image_from_movie(vid_path, snapshot_path, 10)
+    # print(get_centre_dot_location(snapshot_path))
     analyze_video(vid_path, None)
 
     # loc_path = Path('/Users/yefan/Desktop/rot2/rot2-project/temp/temp.npy')
