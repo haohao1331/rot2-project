@@ -12,7 +12,7 @@ print(uart.readline())
 #print(uart.read())
 
 uart.write(bytes('G01 X0 Y-0.5 F60' + '\n', 'UTF-8'))
-time.sleep_ms(50)
+#time.sleep_ms(50)
 grbl_out = str(uart.read())
 print(grbl_out)
 #while uart.any() == 0:
@@ -21,7 +21,7 @@ print(uart.any())
 print(uart.readline())
 
 uart.write(bytes('G01 X0 Y0.5 F60' + '\n', 'UTF-8'))
-time.sleep_ms(50)
+#time.sleep_ms(50)
 print(uart.readline())
 
 #uart.close()
