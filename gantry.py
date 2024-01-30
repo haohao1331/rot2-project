@@ -9,6 +9,7 @@ class Gantry:
         self.encoding = 'UTF-8'
         self.ser = serial.Serial(port, baudrate, timeout=timeout)
         self.ser.write(bytes('\r\n\r\n', 'UTF-8'))
+        # print(self.ser.read())
         time.sleep(2)   # Wait for grbl to initialize
         self.ser.flushInput()
         self.send('G17 G20 G90 G94')
@@ -39,7 +40,7 @@ class Gantry:
     def close(self):
         self.ser.close()
 
-    def move_x(self, distance, speed):
+    def move_x(self, distance, speed):  # TODO: these should be based on differential of current position, but currently it's absolute
         self.send(f'G01 X{distance} Y0 F{speed}')
     
     def move_y(self, distance, speed):
@@ -64,5 +65,6 @@ if __name__ == '__main__':
     # gt.send('$$', wait_for_ok=True)
     # gt.send('$?')
     # gt.send('$G')
-    gt.move_y(-0.5, 60)
+    # gt.move_y(1, 60)
+    # gt.move_x(1, 60)
     gt.close()
