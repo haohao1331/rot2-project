@@ -55,26 +55,34 @@ def get_centre_dot_location(snapshot) -> tuple:
         img = snapshot
     img_size = img.shape
     # print(img_size)
-    img = img[100:img_size[0]//2 + 200, 300:img_size[1]//2 + 200, :]
+    img = img[100:img_size[0]//2 + 200, 500:img_size[1]//2 + 200, :]
     # plt.imshow(img)
     # plt.show()
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     ret, thresh = cv2.threshold(gray, 127, 255, 0)
+    # plt.imshow(thresh)
+    # plt.show()
 
     contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     # contour_img = cv2.drawContours(img, contours, -1, (0, 255, 0), 3)
+    # plt.imshow(contour_img)
+    # plt.show()
 
     for contour in contours:
         # Calculate contour area
         area = cv2.contourArea(contour)
         # print(area)
+        # img_copy = img.copy()
+        # plt.imshow(cv2.drawContours(img_copy, contour, -1, (0, 255, 0), 3))
+        # plt.show()
 
         # Draw contour if its area is below the specified max area
         if min_area < area < max_area:
-            cv2.drawContours(img, contour, -1, (0, 255, 0), 3)
+            # plt.imshow(cv2.drawContours(img, contour, -1, (0, 255, 0), 3))
+            # plt.show()
             M = cv2.moments(contour)
             cx = int(M["m10"] / M["m00"])
             cy = int(M["m01"] / M["m00"])
@@ -113,9 +121,9 @@ def extract_image_from_movie(movie_path : Path, output_image_path, time_in_secon
     cap.release()
 
 if __name__ == '__main__':
-    vid_path = '/Users/yefan/Desktop/rot2/rot2-project/data/2024-01-24_latency_test1/test3-01242024104004-0000.avi'
-    snapshot_path = '/Users/yefan/Desktop/rot2/rot2-project/data/2024-01-24_latency_test1/snapshot.jpg'
-    # extract_image_from_movie(vid_path, snapshot_path, 10)
+    vid_path = '/Users/yefan/Desktop/rot2/rot2-project/data/2024-01-30_latency_test_gantry_direct/test-01302024134440-0000.avi'
+    snapshot_path = '/Users/yefan/Desktop/rot2/rot2-project/data/2024-01-30_latency_test_gantry_direct/snapshot.jpg'
+    # extract_image_from_movie(vid_path, snapshot_path, 10.5)
     # print(get_centre_dot_location(snapshot_path))
     analyze_video(vid_path, None)
 
