@@ -12,19 +12,21 @@ class Gantry:
         # print(self.ser.read())
         time.sleep(2)   # Wait for grbl to initialize
         self.ser.flushInput()
-        self.send('G17 G20 G90 G94')
+        self.send('G17 G21 G91 G94')    # select XY plane, millimeters, incremental distance mode, feed rate mode to units per minute
 
     def send(self, msg : str, wait_for_ok=False):
         print(f'send: {msg}')
         self.ser.write(bytes(msg + '\n', self.encoding)) # Send g-code block to grbl
         if wait_for_ok:
+            out = []
+            ok_str = "b'ok\\r\\n'"
             while True:
                 grbl_out = str(self.ser.readline())
                 ret = grbl_out.strip()
                 print(f'read: {ret}')
-                ok_str = "b'ok\\r\\n'"
+                out.append(ret)
                 if ret == ok_str:
-                    return
+                    return out[:-1]
         else:
             grbl_out = str(self.ser.readline())
             ret = grbl_out.strip()
@@ -59,12 +61,21 @@ class Gantry:
         self.send(f'G01 X0 Y-{distance} F{speed}')
         self.send(f'G01 X0 Y0 F{speed}')
     
+    def get_modal_group(self):
+        return self.send('$G', wait_for_ok=True)
+
+    def print_setting(self):
+        return self.send('$$', wait_for_ok=True)
+    
 if __name__ == '__main__':
     gt = Gantry()
     # gt.test()
-    # gt.send('$$', wait_for_ok=True)
+    # gt.get_modal_group()
+    # gt.print_setting()
+    # gt.send('?')
     # gt.send('$?')
     # gt.send('$G')
-    # gt.move_y(1, 60)
+    gt.move_y(30, 1000)
+    # gt.move_x(30, 1000)
     # gt.move_x(1, 60)
     gt.close()

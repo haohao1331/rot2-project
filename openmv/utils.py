@@ -1,5 +1,6 @@
 from pyb import UART
 import time
+import pyb
 
 class Log():
     def __init__(self) -> None:
@@ -14,6 +15,28 @@ class Log():
 
     def close(self):
         self.log.close()
+
+class VCP():
+    def __init__(self, log) -> None:
+        #for i in range(100):
+            #try:
+                #self.vcp = pyb.USB_VCP(i)
+                #assert self.vcp.isconnected()
+                #log.write(f'vcp {i} created\n')
+                #break
+            #except:
+                #log.write(f'vcp {i} failed\n')
+        self.vcp = pyb.USB_VCP(0)
+        self.log = log
+
+        self.log.write('vcp created\n')
+        # assert self.vcp.isconnected() # for some reason this simply doesn't work without the IDE
+        # log.write('vcp connected\n')
+
+    def write(self, buf):
+        self.vcp.write(buf)
+        self.log.write(f'wrote {buf}\n')
+        self.log.flush()
 
 class Gantry():
     def __init__(self) -> None:
@@ -32,21 +55,19 @@ class Gantry():
         #     print(self.uart.read())
         # print(self.uart.read())
 
-    def setup(self, max_rate, accel):
-        pass
-
     def close(self):
         self.uart.deinit()
-
-    def move_x(self, distance, speed):  # TODO: these should be based on differential of current position, but currently it's absolute
-        pass
-
-    def move_y(self, distance, speed):
-        pass
 
     def test(self):
         self.send('G01 X0 Y-0.5 F60')
         self.send('G01 X0 Y0.5 F60')
+
+def blink_led(a):
+    led = pyb.LED(a)
+    led.on()
+    pyb.delay(200)
+    led.off()
+    return
 
 if __name__ == '__main__':
     gantry = Gantry()
