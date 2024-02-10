@@ -22,15 +22,27 @@ print(sensor.get_exposure_us())
 #img_corr.save("test_corr.jpg")
 
 # top left, top right, bottom right, bottom left
-points = [(46, 6), (293, 10), (286, 240), (50, 226)]    # for QVGA
+points = [(46, 10), (291, 6), (287, 235), (52, 228)]    # for QVGA
 #points = [(24, 4), (145, 4), (142, 118), (25, 114)]     # for QQVGA
 
 black_filter = (0, 30, -128, 127, -128, 127)
+red_filter = (0, 100, 25, 127, -128, 127)
+mouse_filter = (0, 26, -35, 42, -32, 43)
+
+edges = [(274, 226), (40, 227), (36, 9), (279, 11)]
 
 while True:
     img = sensor.snapshot().lens_corr(1.5).rotation_corr(corners=points)
-    blobs = img.find_blobs([black_filter])
-    img.draw_rectangle(blobs[0].rect())
+    #img = sensor.snapshot().lens_corr(1.5)
+    #img = sensor.snapshot()
+
+    #continue
+
+    blobs = img.find_blobs([mouse_filter])
+    for i in range(len(blobs)):
+        print(blobs[i].cx(), blobs[i].cy())
+        img.draw_rectangle(blobs[i].rect())
+        break
     #img = sensor.snapshot().lens_corr(1.5)
     #lines = img.find_line_segments()
     #print(len(lines))
