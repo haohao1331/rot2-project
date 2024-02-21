@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import re
+import pickle
 
 def parse_log(log_file : Path, output_file : Path):
     lines = None
@@ -65,24 +66,32 @@ def parse_log(log_file : Path, output_file : Path):
     
     # create pandas dataframe for holding the output
     df = pd.DataFrame({
+        'name' : [log_file.name] * n_blocks,
         'datetime': datetime,
-        'mouse_pos': list(mouse_pos),
-        'chip_pos': list(chip_pos),
+        'mouse_pos_x': mouse_pos[:, 0],
+        'mouse_pos_y': mouse_pos[:, 1],
+        'chip_pos_x': chip_pos[:, 0],
+        'chip_pos_y': chip_pos[:, 1],
         'state': state,
         'distance': distance,
-        'vector': list(vector),
+        'vector_x': vector[:, 0],
+        'vector_y': vector[:, 1],
         'state_switch': state_switch,
-        'send_signal': list(send_signal),
-        'tangent_vector': list(tangent_vector)
+        'send_signal_x': send_signal[:, 0],
+        'send_signal_y': send_signal[:, 1],
+        'tangent_vector_x': tangent_vector[:, 0],
+        'tangent_vector_y': tangent_vector[:, 1]
     })
 
-    # save the dataframe to a csv file
-    df.to_csv(output_file, index=True)
+    return df
 
 if __name__ == '__main__':
-    name = 'trial5.txt'
-    log_file = Path(f'/Users/yefan/Desktop/rot2/rot2-project/data/2024-02-09_first_mouse_test_SC23/{name}')
+    log_file_dir = Path(f'/Users/yefan/Desktop/rot2/rot2-project/data/2024-02-09_first_mouse_test_SC23')
     output_dir = Path('/Users/yefan/Desktop/rot2/rot2-project/data/2024-02-13_first_mouse_test_SC23_analysis')
-    output_file = output_dir / name.replace('.txt', '.csv')
 
-    parse_log(log_file, output_file)
+    dfs = []
+    for log_file in sorted(log_file_dir.glob('trial*.txt')):
+        dfs.append(parse_log(log_file, output_dir / f'{log_file.stem}.pkl'))
+    df = pd.concat(dfs)
+    df.to_pickle(output_dir / 'concat_trials.pkl')
+    
