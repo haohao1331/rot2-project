@@ -11,6 +11,7 @@ class State(Enum):
     LEAVE_CORNER = 1
 
 state = State.MIDDLE
+control_gantry = False
 
 utils.print_ports()
 
@@ -26,7 +27,6 @@ x_max, x_min, y_max, y_min = 270, 45, 210, 30
 sub_corner_distance = 30
 escape_vector = np.array([0, 0])
 
-buffer = ''
 chip_kf = KalmanFilter(
     np.array([[0], [0]]), # x and y position
     np.eye(2) * 1000, 
@@ -52,14 +52,12 @@ mouse_kf = KalmanFilter(
 while True:
     data = ser.read(1024)
     if len(data) == 0:
-        # print(str(data))
         continue
 
     data = str(data).replace('b\'', '').replace('\'', '')
 
     if not (data.startswith('s') and data.endswith('e') and data.count(',') == 3):  # data not formatted properly, just omit this batch
         continue
-
 
     print('')
     print(datetime.now())
@@ -69,16 +67,18 @@ while True:
     # convert to int
     chip_x, chip_y, mouse_x, mouse_y = int(chip_x), int(chip_y), int(mouse_x), int(mouse_y)
 
-    print(f'mouse: {mouse_x}, {mouse_y} | chip: {chip_x}, {chip_y}')
+    print(f'mouse_px: {mouse_x}, {mouse_y} | chip_px: {chip_x}, {chip_y}')
 
     mouse_pos = np.array([mouse_x, mouse_y]) * corr_vec
     chip_pos = np.array([chip_x, chip_y]) * corr_vec
 
     # update kalman filter
     chip_kf.predict()
-    chip_kf.update(chip_pos.reshape(2, 1))
+    if chip_pos[0] != -1:
+        chip_kf.update(chip_pos.reshape(2, 1))
     mouse_kf.predict()
-    mouse_kf.update(np.array([[mouse_pos[0]], [0], [mouse_pos[1]], [0]]))
+    if mouse_pos[0] != -1:
+        mouse_kf.update(np.array([[mouse_pos[0]], [0], [mouse_pos[1]], [0]]))
 
     print(f'mouse: {mouse_kf.x[0, 0]}, {mouse_kf.x[2, 0]} | chip: {chip_kf.x[0, 0]}, {chip_kf.x[1, 0]}')
 
@@ -123,15 +123,10 @@ while True:
             vec = escape_vector
 
     elif state == State.LEAVE_CORNER:
-        sub_corner = False
-        if (chip_x >= x_max - sub_corner_distance) and (chip_y >= y_max - sub_corner_distance):
-            sub_corner = True
-        elif (chip_x <= x_min + sub_corner_distance) and (chip_y >= y_max - sub_corner_distance):
-            sub_corner = True
-        elif (chip_x <= x_min + sub_corner_distance) and (chip_y <= y_min + sub_corner_distance):
-            sub_corner = True
-        elif (chip_x >= x_max - sub_corner_distance) and (chip_y <= y_min + sub_corner_distance):
-            sub_corner = True
+        sub_corner = (chip_x >= x_max - sub_corner_distance) and (chip_y >= y_max - sub_corner_distance) \
+                    or (chip_x <= x_min + sub_corner_distance) and (chip_y >= y_max - sub_corner_distance) \
+                    or (chip_x <= x_min + sub_corner_distance) and (chip_y <= y_min + sub_corner_distance) \
+                    or (chip_x >= x_max - sub_corner_distance) and (chip_y <= y_min + sub_corner_distance)
     
         vec = escape_vector
 
@@ -143,5 +138,6 @@ while True:
     vec = vec / dist
     print(dist, vec)
 
-    if dist < 70:
+    # actuate gantry
+    if control_gantry and dist < 70:
         gt.send(f'G01 X{-vec[0] * speed / 1000} Y{-vec[1] * speed / 1000} F{speed}')  # Note that the coordinate system of the gantry with respect to the camera is flipped
