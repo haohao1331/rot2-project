@@ -91,7 +91,8 @@ if __name__ == '__main__':
 
     dfs = []
     for log_file in sorted(log_file_dir.glob('trial*.txt')):
-        dfs.append(parse_log(log_file, output_dir / f'{log_file.stem}.pkl'))
-    df = pd.concat(dfs)
-    df.to_pickle(output_dir / 'concat_trials.pkl')
+        # dfs.append(parse_log(log_file, output_dir / f'{log_file.stem}.pkl'))
+        parse_log(log_file, output_dir / f'{log_file.stem}.pkl').to_pickle(output_dir / f'{log_file.stem}.pkl')
+    # df = pd.concat(dfs)
+    # df.to_pickle(output_dir / 'concat_trials.pkl')
     

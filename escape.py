@@ -4,7 +4,7 @@ import numpy as np
 from gantry import Gantry
 from enum import Enum
 from datetime import datetime
-
+from kalman_filter import KalmanFilter
 
 class State(Enum):
     MIDDLE = 0
@@ -27,10 +27,27 @@ sub_corner_distance = 30
 escape_vector = np.array([0, 0])
 
 buffer = ''
-
-# for i in range(100):
-#     data = ser.read(1024)
-#     print(data)
+chip_kf = KalmanFilter(
+    np.array([[0], [0]]), # x and y position
+    np.eye(2) * 1000, 
+    np.array([[1., 0.], 
+              [0., 1.]]), 
+    np.array([[1., 0.],
+              [0., 1.]]), 
+    np.eye(2) * 0.01, 
+    np.array([[5.]])
+    )
+mouse_kf = KalmanFilter(
+    np.array([[0], [0], [0], [0]]), # x, x_vel, y, y_vel
+    np.eye(4) * 1000, 
+    np.array([[1., 1., 0., 0.], 
+              [0., 1., 0., 0.],
+              [0., 0., 1., 1.],
+              [0., 0., 0., 1.]]), 
+    np.array([[1., 0., 0., 0.],
+              [0., 0., 1., 0.]]), 
+    np.eye(4) * 0.01, 
+    np.array([[5.]]))
 
 while True:
     data = ser.read(1024)
@@ -54,7 +71,18 @@ while True:
 
     print(f'mouse: {mouse_x}, {mouse_y} | chip: {chip_x}, {chip_y}')
 
-    diff_vec = np.array([chip_x - mouse_x, chip_y - mouse_y]) * corr_vec
+    mouse_pos = np.array([mouse_x, mouse_y]) * corr_vec
+    chip_pos = np.array([chip_x, chip_y]) * corr_vec
+
+    # update kalman filter
+    chip_kf.predict()
+    chip_kf.update(chip_pos.reshape(2, 1))
+    mouse_kf.predict()
+    mouse_kf.update(np.array([[mouse_pos[0]], [0], [mouse_pos[1]], [0]]))
+
+    print(f'mouse: {mouse_kf.x[0, 0]}, {mouse_kf.x[2, 0]} | chip: {chip_kf.x[0, 0]}, {chip_kf.x[1, 0]}')
+
+    diff_vec = chip_pos - mouse_pos
     vec = diff_vec.copy()
     print(f'state: {state}')
 
@@ -116,4 +144,4 @@ while True:
     print(dist, vec)
 
     if dist < 70:
-        gt.send(f'G01 X{-vec[0]} Y{-vec[1]} F{speed}')  # Note that the coordinate system of the gantry with respect to the camera is flipped
+        gt.send(f'G01 X{-vec[0] * speed / 1000} Y{-vec[1] * speed / 1000} F{speed}')  # Note that the coordinate system of the gantry with respect to the camera is flipped
