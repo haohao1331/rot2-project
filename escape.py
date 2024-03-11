@@ -5,6 +5,7 @@ from gantry import Gantry
 from enum import Enum
 from datetime import datetime
 from kalman_filter import KalmanFilter
+import matplotlib.pyplot as plt
 
 class State(Enum):
     MIDDLE = 0
@@ -16,7 +17,8 @@ control_gantry = False
 utils.print_ports()
 
 ser = serial.Serial('COM6', baudrate=115200, timeout=0.01)
-gt = Gantry()
+if control_gantry:
+    gt = Gantry()
 
 corr_vec = np.array([483 / 320, 454 / 240]) # convert pixels to milimeter
 
@@ -28,7 +30,7 @@ sub_corner_distance = 30
 escape_vector = np.array([0, 0])
 
 chip_kf = KalmanFilter(
-    np.array([[0], [0]]), # x and y position
+    np.array([[100], [100]]), # x and y position
     np.eye(2) * 1000, 
     np.array([[1., 0.], 
               [0., 1.]]), 
@@ -49,95 +51,137 @@ mouse_kf = KalmanFilter(
     np.eye(4) * 0.01, 
     np.array([[5.]]))
 
-while True:
-    data = ser.read(1024)
-    if len(data) == 0:
-        continue
+mouse_pos_store = []
+chip_pos_store = []
+chip_pos_raw_store = []
 
-    data = str(data).replace('b\'', '').replace('\'', '')
+try:
+    while True:
+        data = ser.read(1024)
+        if len(data) == 0:
+            continue
 
-    if not (data.startswith('s') and data.endswith('e') and data.count(',') == 3):  # data not formatted properly, just omit this batch
-        continue
+        data = str(data).replace('b\'', '').replace('\'', '')
 
-    print('')
-    print(datetime.now())
-    data = data.replace('e', '').replace('s', '')
-    print(data)
-    mouse_x, mouse_y, chip_x, chip_y = data.split(',')
-    # convert to int
-    chip_x, chip_y, mouse_x, mouse_y = int(chip_x), int(chip_y), int(mouse_x), int(mouse_y)
+        if not (data.startswith('s') and data.endswith('e') and data.count(',') == 3):  # data not formatted properly, just omit this batch
+            continue
 
-    print(f'mouse_px: {mouse_x}, {mouse_y} | chip_px: {chip_x}, {chip_y}')
+        print('')
+        print(datetime.now())
+        data = data.replace('e', '').replace('s', '')
+        print(data)
+        mouse_x, mouse_y, chip_x, chip_y = data.split(',')
+        # convert to int
+        chip_x, chip_y, mouse_x, mouse_y = int(chip_x), int(chip_y), int(mouse_x), int(mouse_y)
 
-    mouse_pos = np.array([mouse_x, mouse_y]) * corr_vec
-    chip_pos = np.array([chip_x, chip_y]) * corr_vec
+        print(f'mouse_px: {mouse_x}, {mouse_y} | chip_px: {chip_x}, {chip_y}')
 
-    # update kalman filter
-    chip_kf.predict()
-    if chip_pos[0] != -1:
-        chip_kf.update(chip_pos.reshape(2, 1))
-    mouse_kf.predict()
-    if mouse_pos[0] != -1:
-        mouse_kf.update(np.array([[mouse_pos[0]], [0], [mouse_pos[1]], [0]]))
+        mouse_pos = np.array([mouse_x, mouse_y]) * corr_vec
+        chip_pos = np.array([chip_x, chip_y]) * corr_vec
+        chip_pos_raw_store.append(chip_pos)
 
-    print(f'mouse: {mouse_kf.x[0, 0]}, {mouse_kf.x[2, 0]} | chip: {chip_kf.x[0, 0]}, {chip_kf.x[1, 0]}')
+        print(f'mouse: {mouse_pos[0]}, {mouse_pos[1]} | chip: {chip_pos[0]}, {chip_pos[1]}')
 
-    diff_vec = chip_pos - mouse_pos
-    vec = diff_vec.copy()
-    print(f'state: {state}')
+        # update kalman filter
+        chip_kf.predict()
+        if chip_x != -1:
+            chip_kf.update(chip_pos.reshape(2, 1))
+        mouse_kf.predict()
+        if mouse_x != -1:
+            mouse_kf.update(mouse_pos.reshape(2, 1))
 
-    if state == State.MIDDLE:
-        corner = (chip_x >= x_max or chip_x <= x_min) and (chip_y >= y_max or chip_y <= y_min)
-        if not corner:
-            # edge constraints
-            if chip_x >= x_max:
-                vec[0] = min(0, vec[0])
-            elif chip_x <= x_min:
-                vec[0] = max(0, vec[0])
-            if chip_y >= y_max:
-                vec[1] = min(0, vec[1])
-            elif chip_y <= y_min:
-                vec[1] = max(0, vec[1])
-        else:
-            state = State.LEAVE_CORNER  # switch state
-            print('state switch to LEAVE_CORNER')
+        print(f'mouse: {mouse_kf.x[0, 0]}, {mouse_kf.x[2, 0]} | chip: {chip_kf.x[0, 0]}, {chip_kf.x[1, 0]}')
 
-            at_x_max = int(chip_x >= x_max) * 2 - 1
-            at_y_max = int(chip_y >= y_max) * 2 - 1
+        mouse_pos = np.array([mouse_kf.x[0, 0], mouse_kf.x[2, 0]])
+        chip_pos = np.array([chip_kf.x[0, 0], chip_kf.x[1, 0]])
 
-            # assume we are dealing with top left corner
-            tangent = np.array([at_x_max, -at_y_max])
-            print(f'tangent: {tangent}')
+        mouse_pos_store.append(mouse_pos)
+        chip_pos_store.append(chip_pos)
 
-            x_edge = np.array([-at_x_max, 0])
-            y_edge = np.array([0, -at_y_max])
+        chip_x, chip_y = chip_kf.x[0, 0] / corr_vec[0], chip_kf.x[1, 0] / corr_vec[1]
+        print(chip_x, chip_y)
 
-            # project onto tangent, and then project onto edge
-            tangent_proj = np.dot(vec, tangent)
+        vec = chip_pos - mouse_pos
+        print(f'vec: {vec}')
 
-            if tangent_proj >= 0:
-                escape_vector = y_edge
+        print(f'state: {state}')
+
+        if state == State.MIDDLE:
+            corner = (chip_x >= x_max or chip_x <= x_min) and (chip_y >= y_max or chip_y <= y_min)
+            if not corner:
+                # edge constraints
+                if chip_x >= x_max:
+                    vec[0] = min(0, vec[0])
+                elif chip_x <= x_min:
+                    vec[0] = max(0, vec[0])
+                if chip_y >= y_max:
+                    vec[1] = min(0, vec[1])
+                elif chip_y <= y_min:
+                    vec[1] = max(0, vec[1])
             else:
-                escape_vector = x_edge
+                state = State.LEAVE_CORNER  # switch state
+                print('state switch to LEAVE_CORNER')
 
+                at_x_max = int(chip_x >= x_max) * 2 - 1
+                at_y_max = int(chip_y >= y_max) * 2 - 1
+
+                # assume we are dealing with top left corner
+                tangent = np.array([at_x_max, -at_y_max])
+                print(f'tangent: {tangent}')
+
+                x_edge = np.array([-at_x_max, 0])
+                y_edge = np.array([0, -at_y_max])
+
+                # project onto tangent, and then project onto edge
+                tangent_proj = np.dot(vec, tangent)
+
+                if tangent_proj >= 0:
+                    escape_vector = y_edge
+                else:
+                    escape_vector = x_edge
+
+                vec = escape_vector
+
+        elif state == State.LEAVE_CORNER:
+            sub_corner = (chip_x >= x_max - sub_corner_distance) and (chip_y >= y_max - sub_corner_distance) \
+                        or (chip_x <= x_min + sub_corner_distance) and (chip_y >= y_max - sub_corner_distance) \
+                        or (chip_x <= x_min + sub_corner_distance) and (chip_y <= y_min + sub_corner_distance) \
+                        or (chip_x >= x_max - sub_corner_distance) and (chip_y <= y_min + sub_corner_distance)
+        
             vec = escape_vector
 
-    elif state == State.LEAVE_CORNER:
-        sub_corner = (chip_x >= x_max - sub_corner_distance) and (chip_y >= y_max - sub_corner_distance) \
-                    or (chip_x <= x_min + sub_corner_distance) and (chip_y >= y_max - sub_corner_distance) \
-                    or (chip_x <= x_min + sub_corner_distance) and (chip_y <= y_min + sub_corner_distance) \
-                    or (chip_x >= x_max - sub_corner_distance) and (chip_y <= y_min + sub_corner_distance)
-    
-        vec = escape_vector
+            if not sub_corner:
+                state = State.MIDDLE
+                print('state switch to MIDDLE')
+        
+        dist = np.linalg.norm(vec) + 0.01
+        vec = vec / dist
+        print(dist, vec)
 
-        if not sub_corner:
-            state = State.MIDDLE
-            print('state switch to MIDDLE')
-    
-    dist = np.linalg.norm(vec) + 0.01
-    vec = vec / dist
-    print(dist, vec)
+        # actuate gantry
+        if control_gantry and dist < 70:
+            gt.send(f'G01 X{-vec[0] * speed / 1000} Y{-vec[1] * speed / 1000} F{speed}')  # Note that the coordinate system of the gantry with respect to the camera is flipped
+except KeyboardInterrupt:
+    ser.close()
+    # gt.close()
+    print('interrupted')
 
-    # actuate gantry
-    if control_gantry and dist < 70:
-        gt.send(f'G01 X{-vec[0] * speed / 1000} Y{-vec[1] * speed / 1000} F{speed}')  # Note that the coordinate system of the gantry with respect to the camera is flipped
+    # plot
+    mouse_pos_store = np.array(mouse_pos_store)
+    chip_pos_store = np.array(chip_pos_store)
+    chip_pos_raw_store = np.array(chip_pos_raw_store)
+
+
+    plt.plot(chip_pos_store[:, 0], label='chip x est')
+    plt.plot(chip_pos_raw_store[:, 0], label='chip x raw')
+    plt.savefig('chip x.png')
+    plt.close()
+
+    plt.plot(chip_pos_store[:, 1], label='chip y est')
+    plt.plot(chip_pos_raw_store[:, 1], label='chip y raw')
+    plt.savefig('chip y.png')
+    plt.close()
+
+    plt.plot(chip_pos_store[:, 0], chip_pos_store[:, 1], label='chip')
+    plt.savefig('chip pos.png')
+    plt.close()

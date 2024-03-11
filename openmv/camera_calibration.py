@@ -38,11 +38,21 @@ while True:
 
     #continue
 
-    blobs = img.find_blobs([mouse_filter])
+    #blobs = img.find_blobs([black_filter])
+    #for i in range(len(blobs)):
+        ##print(blobs[i].cx(), blobs[i].cy())
+        ##print(blobs[i].area())
+        #if 1500 >= blobs[i].area() >= 500:
+            #img.draw_rectangle(blobs[i].rect())
+            #break
+
+    blobs = img.find_blobs([red_filter], area_threshold=10, merge=True)
     for i in range(len(blobs)):
-        print(blobs[i].cx(), blobs[i].cy())
-        img.draw_rectangle(blobs[i].rect())
-        break
+        #print(blobs[i].cx(), blobs[i].cy())
+        print(blobs[i].area())
+        if 200 >= blobs[i].area():
+            img.draw_rectangle(blobs[i].rect())
+            break
     #img = sensor.snapshot().lens_corr(1.5)
     #lines = img.find_line_segments()
     #print(len(lines))
