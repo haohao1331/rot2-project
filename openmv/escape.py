@@ -19,17 +19,16 @@ pyb.delay(1000)
 
 
 # top left, top right, bottom right, bottom left
-points = [(46, 6), (293, 10), (286, 240), (50, 226)]    # for QVGA
+points = [(46, 10), (291, 6), (287, 235), (52, 228)]    # for QVGA
 #points = [(24, 4), (145, 4), (142, 118), (25, 114)]     # for QQVGA
 
 
 mouse_filter = (0, 26, -35, 42, -32, 43)
 black_filter = (0, 30, -128, 127, -128, 127)
+debug_black_filter = (0, 38, -128, 8, -128, 127)
 red_filter = (0, 100, 25, 127, -128, 127)
 
 delay = 20
-max_speed = 4000
-distance = 0.3
 prev = time.ticks_ms()
 prev_direction = None
 
@@ -46,23 +45,23 @@ while True:
     diff = time.ticks_diff(now, prev)
     img = sensor.snapshot().lens_corr(1.5).rotation_corr(corners=points)
 
-    mouse = img.find_blobs([black_filter])
-    chips = img.find_blobs([red_filter])
+    mouse = img.find_blobs([mouse_filter])
+    chips = img.find_blobs([red_filter], area_threshold=10, merge=True)
 
     chip_x, chip_y = -1, -1
     for i in range(len(chips)):
-        if 100 >= chips[i].area() >= 10:
+        if 200 >= chips[i].area() >= 10:
             chip_x, chip_y = chips[i].cx(), chips[i].cy()
             break
 
     mouse_x, mouse_y = -1, -1
     for i in range(len(mouse)):
-        # if 1500 >= mouse[i].area() >= 500:
-        #     mouse_x, mouse_y = mouse[i].cx(), mouse[i].cy()
-        #     break
-        if 200 >= mouse[i].area() >= 10:
+        if 1500 >= mouse[i].area() >= 300:
             mouse_x, mouse_y = mouse[i].cx(), mouse[i].cy()
             break
+        # if 200 >= mouse[i].area() >= 10:
+        #     mouse_x, mouse_y = mouse[i].cx(), mouse[i].cy()
+        #     break
 
     #print(f'chip: {chip_x}, {chip_y} | mouse: {mouse_x}, {mouse_y}')
 
