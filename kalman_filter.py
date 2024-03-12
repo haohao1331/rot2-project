@@ -17,6 +17,7 @@ class KalmanFilter:
         self.P = self.A @ self.P @ self.A.T + self.Q    # a priori estimate covariance
 
     def update(self, z):
+        assert z.shape == self.x.shape
         y = z - self.H @ self.x   # residual
         S = self.H @ self.P @ self.H.T + self.R  # residual covariance
         K = self.P @ self.H.T @ np.linalg.inv(S)    # Kalman gain
