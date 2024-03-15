@@ -6,6 +6,7 @@ from enum import Enum
 from datetime import datetime
 from kalman_filter import KalmanFilter
 import matplotlib.pyplot as plt
+import pickle
 
 class State(Enum):
     MIDDLE = 0
@@ -36,7 +37,7 @@ if control_gantry:
 
 corr_vec = np.array([483 / 320, 454 / 240]) # convert pixels to milimeter
 
-speed = 1500    # TODO: make this depend on the distance that's required to move
+speed = 3000    # TODO: make this depend on the distance that's required to move
 edges = [(279, 220), (41, 223), (37, 23), (276, 25)]
 x_max, x_min, y_max, y_min = 270, 45, 210, 30
 
@@ -73,7 +74,7 @@ mouse_pos_store = []
 chip_pos_store = []
 chip_pos_raw_store = []
 vec_gantry = np.zeros((2))
-
+prev_mouse_pos = np.zeros((2))
 
 i = 0
 try:
@@ -95,7 +96,7 @@ try:
         chip_pos_mm = np.array([chip_x, chip_y]) * corr_vec
         chip_pos_raw_store.append(chip_pos_mm)
 
-        print(f'mouse: {mouse_pos_mm[0]}, {mouse_pos_mm[1]} | chip: {chip_pos_mm[0]}, {chip_pos_mm[1]}')
+        print(f'mouse_raw: {mouse_pos_mm[0]}, {mouse_pos_mm[1]} | chip_raw: {chip_pos_mm[0]}, {chip_pos_mm[1]}')
 
         # update kalman filter
         chip_kf.predict(u = vec_gantry.reshape(2, 1) * 5)
@@ -104,9 +105,14 @@ try:
         # mouse_kf.predict(u = np.zeros((4, 1)))
         # if mouse_x != -1:
         #     mouse_kf.update(mouse_pos_mm.reshape(2, 1))
+            
+        if mouse_x == -1:
+            mouse_pos_mm = prev_mouse_pos
+        
+        prev_mouse_pos = mouse_pos_mm
 
         # print(f'mouse: {mouse_kf.x[0, 0]}, {mouse_kf.x[2, 0]} | chip: {chip_kf.x[0, 0]}, {chip_kf.x[1, 0]}')
-        print(f'mouse: {mouse_pos_mm[0]}, {mouse_pos_mm[1]} | chip: {chip_kf.x[0, 0]}, {chip_kf.x[1, 0]}')
+        print(f'mouse_est: {mouse_pos_mm[0]}, {mouse_pos_mm[1]} | chip_est: {chip_kf.x[0, 0]}, {chip_kf.x[1, 0]}')
 
         # mouse_pos_mm = np.array([mouse_kf.x[0, 0], mouse_kf.x[2, 0]])
         chip_pos_mm = np.array([chip_kf.x[0, 0], chip_kf.x[1, 0]])
@@ -193,6 +199,13 @@ except KeyboardInterrupt:
     mouse_pos_store = np.array(mouse_pos_store)
     chip_pos_store = np.array(chip_pos_store)
     chip_pos_raw_store = np.array(chip_pos_raw_store)
+
+    with open('mouse_pos_store.pkl', 'wb+') as f:
+        pickle.dump(mouse_pos_store, f)
+    with open('chip_pos_store.pkl', 'wb+') as f:
+        pickle.dump(chip_pos_store, f)
+    with open('chip_pos_raw_store.pkl', 'wb+') as f:
+        pickle.dump(chip_pos_raw_store, f)
 
 
     plt.plot(chip_pos_store[:, 0], label='chip x est')

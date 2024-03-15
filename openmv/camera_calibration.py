@@ -42,11 +42,12 @@ while True:
     blobs = img.find_blobs([mouse_filter])
     for i in range(len(blobs)):
         #print(blobs[i].cx(), blobs[i].cy())
-        #print(blobs[i].area())
+        print(blobs[i].area())
         #if 1500 >= blobs[i].area() >= 500:
-        if 1500 >= blobs[i].area() >= 300:
+        if 2500 >= blobs[i].area() >= 300:
             img.draw_rectangle(blobs[i].rect())
             break
+    print('')
 
     blobs = img.find_blobs([red_filter], area_threshold=10, merge=True)
     for i in range(len(blobs)):
