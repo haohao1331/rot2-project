@@ -7,6 +7,7 @@ from datetime import datetime
 from kalman_filter import KalmanFilter
 import matplotlib.pyplot as plt
 import pickle
+from time import perf_counter
 
 class State(Enum):
     MIDDLE = 0
@@ -26,55 +27,43 @@ def receive_data(ser):
     # print(data)
     return data
 
-state = State.MIDDLE
+# system parameters
 control_gantry = True
+corr_vec = np.array([483 / 320, 454 / 240]) # convert pixels to milimeter
+speed = 3000    # TODO: make this depend on the distance that's required to move
+edges = [(279, 220), (41, 223), (37, 23), (276, 25)]
+x_max, x_min, y_max, y_min = 270, 45, 210, 30
+sub_corner_distance = 30
+gantry_history_length = 3
+
+chip_kf = KalmanFilter(
+    np.array([[100], [100]]), # x and y position
+    np.eye(2) * 1000,       # initial variance of the state
+    np.array([[1., 0.],     # state transition matrix
+              [0., 1.]]), 
+    np.array([[1., 0.],     # control matrix
+              [0., 1.]]),
+    np.array([[1., 0.],     # observation matrix
+              [0., 1.]]), 
+    np.eye(2) * 1,       # observation noise
+    np.eye(2) * 5.0         # process noise
+    )
 
 utils.print_ports()
-
 ser = serial.Serial('COM6', baudrate=115200, timeout=0.01)
 if control_gantry:
     gt = Gantry()
 
-corr_vec = np.array([483 / 320, 454 / 240]) # convert pixels to milimeter
-
-speed = 3000    # TODO: make this depend on the distance that's required to move
-edges = [(279, 220), (41, 223), (37, 23), (276, 25)]
-x_max, x_min, y_max, y_min = 270, 45, 210, 30
-
-sub_corner_distance = 30
-escape_vector = np.array([0, 0])
-
-chip_kf = KalmanFilter(
-    np.array([[100], [100]]), # x and y position
-    np.eye(2) * 1000, 
-    np.array([[1., 0.], 
-              [0., 1.]]), 
-    np.array([[1., 0.],
-              [0., 1.]]),
-    np.array([[1., 0.],
-              [0., 1.]]), 
-    np.eye(2) * 0.01, 
-    np.eye(2) * 5.0
-    )
-# mouse_kf = KalmanFilter(
-#     np.array([[0], [0], [0], [0]]), # x, x_vel, y, y_vel
-#     np.eye(4) * 1000, 
-#     np.array([[1., 1., 0., 0.], 
-#               [0., 1., 0., 0.],
-#               [0., 0., 1., 1.],
-#               [0., 0., 0., 1.]]), 
-#     np.zeros((4, 4)),
-#     np.array([[1., 0., 0., 0.],
-#               [0., 0., 1., 0.]]), 
-#     np.eye(4) * 0.01, 
-#     np.eye(2) * 5.0
-#     )
+# system state variables
+state = State.MIDDLE
+escape_vector = np.array([0, 0])    # for storing escape vector, used when puck is trying to leave a corner
+vec_gantry = np.zeros((2))
+gantry_cmd_history = np.zeros((gantry_history_length, 2))
+prev_mouse_pos = np.zeros((2))  # if camera fails to detect mouse position, previous mouse position is used
 
 mouse_pos_store = []
 chip_pos_store = []
 chip_pos_raw_store = []
-vec_gantry = np.zeros((2))
-prev_mouse_pos = np.zeros((2))
 
 i = 0
 try:
@@ -83,6 +72,7 @@ try:
 
         if data is None:
             continue
+        tic = perf_counter()
         print(f'i: {i}')
         print(datetime.now())
 
@@ -99,7 +89,8 @@ try:
         print(f'mouse_raw: {mouse_pos_mm[0]}, {mouse_pos_mm[1]} | chip_raw: {chip_pos_mm[0]}, {chip_pos_mm[1]}')
 
         # update kalman filter
-        chip_kf.predict(u = vec_gantry.reshape(2, 1) * 5)
+        # chip_kf.predict(u = vec_gantry.reshape(2, 1) * 5)   # using the previous control input
+        chip_kf.predict(u = gantry_cmd_history[i % gantry_history_length].reshape(2, 1) * 5)    # this will correspond to gantry input from 3 frames ago
         if chip_x != -1:
             chip_kf.update(chip_pos_mm.reshape(2, 1))
         # mouse_kf.predict(u = np.zeros((4, 1)))
@@ -120,13 +111,17 @@ try:
         mouse_pos_store.append(mouse_pos_mm)
         chip_pos_store.append(chip_pos_mm)
 
-        chip_x, chip_y = chip_pos_mm[0] / corr_vec[0], chip_pos_mm[1] / corr_vec[1]
         # print(chip_x, chip_y)
 
-        vec = chip_pos_mm - mouse_pos_mm
-        print(f'vec: {vec}')
+        vec = chip_pos_mm - mouse_pos_mm    # compute the escape vector first, before using the predicted future chip position
+        # an interesting biology question, should the prey's escape strategy depend on it's current position or the predator's predicted future position?
 
+        print(f'vec: {vec}')
         print(f'state: {state}')
+
+        predicted_chip_pos = chip_pos_mm + np.sum(gantry_cmd_history, axis=0) * 5
+        print(predicted_chip_pos.shape)
+        chip_x, chip_y = predicted_chip_pos[0] / corr_vec[0], predicted_chip_pos[1] / corr_vec[1]
 
         if state == State.MIDDLE:
             corner = (chip_x >= x_max or chip_x <= x_min) and (chip_y >= y_max or chip_y <= y_min)
@@ -189,7 +184,9 @@ try:
             gt.send(f'G01 X{-vec_gantry[0]} Y{-vec_gantry[1]} F{speed}')  # Note that the coordinate system of the gantry with respect to the camera is flipped
         else:
             vec_gantry = np.zeros((2))
+        gantry_cmd_history[i % gantry_history_length] = vec_gantry
         i += 1
+        print(f'elapsed time: {(perf_counter() - tic) * 1000} ms')
 except KeyboardInterrupt:
     ser.close()
     # gt.close()
