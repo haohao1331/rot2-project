@@ -45,7 +45,7 @@ while True:
     diff = time.ticks_diff(now, prev)
     img = sensor.snapshot().lens_corr(1.5).rotation_corr(corners=points)
 
-    mouse = img.find_blobs([mouse_filter], area_threshold=300, merge=True)
+    mouse = img.find_blobs([debug_black_filter], area_threshold=300, merge=True)
     chips = img.find_blobs([red_filter], area_threshold=10, merge=True)
 
     chip_x, chip_y = -1, -1

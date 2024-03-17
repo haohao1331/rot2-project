@@ -14,7 +14,7 @@ class Gantry:
         self.ser.flushInput()
         self.send('G17 G21 G91 G94')    # select XY plane, millimeters, incremental distance mode, feed rate mode to units per minute
 
-    def send(self, msg : str, wait_for_ok=False):
+    def send(self, msg : str, wait_for_ok=False, wait_for_read=True):
         print(f'send: {msg}')
         self.ser.write(bytes(msg + '\n', self.encoding)) # Send g-code block to grbl
         if wait_for_ok:
@@ -27,11 +27,13 @@ class Gantry:
                 out.append(ret)
                 if ret == ok_str:
                     return out[:-1]
-        else:
+        elif wait_for_read:
             grbl_out = str(self.ser.readline())
             ret = grbl_out.strip()
             print(f'read: {ret}')
             return ret
+        else:
+            return None
     
     def setup(self, max_rate, accel):
         self.send(f'$110={max_rate}')
