@@ -42,10 +42,10 @@ while True:
     now = time.ticks_ms()
     if time.ticks_diff(now, prev) < delay:
         continue
-    diff = time.ticks_diff(now, prev)
+    prev = now
     img = sensor.snapshot().lens_corr(1.5).rotation_corr(corners=points)
 
-    mouse = img.find_blobs([debug_black_filter], area_threshold=300, merge=True)
+    mouse = img.find_blobs([mouse_filter], area_threshold=300, merge=True)
     chips = img.find_blobs([red_filter], area_threshold=10, merge=True)
 
     chip_x, chip_y = -1, -1
@@ -66,5 +66,7 @@ while True:
     #print(f'chip: {chip_x}, {chip_y} | mouse: {mouse_x}, {mouse_y}')
 
     vcp.write(f's{mouse_x},{mouse_y},{chip_x},{chip_y}e')
+
+    log.write(str(time.ticks_diff(now, time.ticks_ms())) + '\n')
 
 

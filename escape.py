@@ -8,6 +8,7 @@ from kalman_filter import KalmanFilter
 import matplotlib.pyplot as plt
 import pickle
 from time import perf_counter
+import os
 
 class State(Enum):
     MIDDLE = 0
@@ -36,6 +37,9 @@ x_max, x_min, y_max, y_min = 270, 45, 210, 30
 sub_corner_distance = 30
 gantry_history_length = 3
 trigger_distance = 120
+output_dir = r'C:\git\rot2-project\data\2024-03-17_SC22\trial6_speed3000'
+
+# os.mkdir(output_dir)
 
 chip_kf = KalmanFilter(
     np.array([[100], [100]]), # x and y position
@@ -92,7 +96,7 @@ try:
 
         # update kalman filter
         u = gantry_cmd_history[i % gantry_history_length].reshape(2, 1) * 5
-        print(f'u: {u}')
+
         # chip_kf.predict(u = vec_gantry.reshape(2, 1) * 5)   # using the previous control input
         chip_kf.predict(u = u)    # this will correspond to gantry input from 3 frames ago
         if chip_x != -1:
@@ -185,7 +189,7 @@ try:
         print(f'elapsed calculation time: {(perf_counter() - tic) * 1000} ms')
         # actuate gantry
         if control_gantry and dist < trigger_distance:
-            vec_gantry = vec * speed / 1000
+            vec_gantry = vec * speed / 1000 / 1.3
             gt.send(f'G01 X{-vec_gantry[0]:.2f} Y{-vec_gantry[1]:.2f} F{speed}', wait_for_read=False)  # Note that the coordinate system of the gantry with respect to the camera is flipped
         else:
             vec_gantry = np.zeros((2))
@@ -205,24 +209,24 @@ except KeyboardInterrupt:
     gantry_cmd_store = np.array(gantry_cmd_store)
     gantry_position = np.cumsum(gantry_cmd_store, axis=0) * 5 + chip_pos_store[0]
 
-    with open('mouse_pos_store.pkl', 'wb+') as f:
+    with open(os.path.join(output_dir, 'mouse_pos_store.pkl'), 'wb+') as f:
         pickle.dump(mouse_pos_store, f)
-    with open('chip_pos_store.pkl', 'wb+') as f:
+    with open(os.path.join(output_dir, 'chip_pos_store.pkl'), 'wb+') as f:
         pickle.dump(chip_pos_store, f)
-    with open('chip_pos_raw_store.pkl', 'wb+') as f:
+    with open(os.path.join(output_dir, 'chip_pos_raw_store.pkl'), 'wb+') as f:
         pickle.dump(chip_pos_raw_store, f)
 
 
     plt.plot(chip_pos_store[:, 0], label='chip x est')
     plt.plot(chip_pos_raw_store[:, 0], label='chip x raw')
     plt.legend()
-    plt.savefig('chip x.png')
+    plt.savefig(os.path.join(output_dir, 'chip x.png'))
     plt.close()
 
     plt.plot(chip_pos_store[:, 1], label='chip y est')
     plt.plot(chip_pos_raw_store[:, 1], label='chip y raw')
     plt.legend()
-    plt.savefig('chip y.png')
+    plt.savefig(os.path.join(output_dir, 'chip y.png'))
     plt.close()
 
     plt.plot(chip_pos_store[:, 0], chip_pos_store[:, 1], label='chip est')
@@ -232,7 +236,7 @@ except KeyboardInterrupt:
     plt.ylim(0, 454)
     plt.legend()
     plt.gca().invert_xaxis()
-    plt.savefig('chip pos.png')
+    plt.savefig(os.path.join(output_dir, 'chip pos.png'))
     plt.close()
 
     plt.plot(mouse_pos_store[:, 0], mouse_pos_store[:, 1], label='mouse pos')
@@ -240,6 +244,6 @@ except KeyboardInterrupt:
     plt.xlim(0, 483)
     plt.ylim(0, 454)
     plt.gca().invert_xaxis()
-    plt.savefig('mouse pos.png')
+    plt.savefig(os.path.join(output_dir, 'mouse pos.png'))
     plt.close()
 
