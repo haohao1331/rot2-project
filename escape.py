@@ -90,20 +90,14 @@ try:
 
         mouse_pos_mm = np.array([mouse_x, mouse_y]) * corr_vec
         chip_pos_mm = np.array([chip_x, chip_y]) * corr_vec
-        chip_pos_raw_store.append(chip_pos_mm)
 
         print(f'mouse_raw: {mouse_pos_mm[0]}, {mouse_pos_mm[1]} | chip_raw: {chip_pos_mm[0]}, {chip_pos_mm[1]}')
 
         # update kalman filter
-        u = gantry_cmd_history[i % gantry_history_length].reshape(2, 1) * 5
-
-        # chip_kf.predict(u = vec_gantry.reshape(2, 1) * 5)   # using the previous control input
+        u = gantry_cmd_history[i % gantry_history_length].reshape(2, 1) * 5 # using gantry input from 3 frames ago
         chip_kf.predict(u = u)    # this will correspond to gantry input from 3 frames ago
         if chip_x != -1:
             chip_kf.update(chip_pos_mm.reshape(2, 1))
-        # mouse_kf.predict(u = np.zeros((4, 1)))
-        # if mouse_x != -1:
-        #     mouse_kf.update(mouse_pos_mm.reshape(2, 1))
             
         if mouse_x == -1:
             mouse_pos_mm = prev_mouse_pos
@@ -116,20 +110,14 @@ try:
         # mouse_pos_mm = np.array([mouse_kf.x[0, 0], mouse_kf.x[2, 0]])
         chip_pos_mm = np.array([chip_kf.x[0, 0], chip_kf.x[1, 0]])
 
-        mouse_pos_store.append(mouse_pos_mm)
-        chip_pos_store.append(chip_pos_mm)
-
-        # print(chip_x, chip_y)
-
         predicted_chip_pos = chip_pos_mm + np.sum(gantry_cmd_history, axis=0) * 5
         print(f'predicted_chip_pos: {predicted_chip_pos[0]}, {predicted_chip_pos[1]}')
-        # print(predicted_chip_pos.shape)
         chip_x, chip_y = predicted_chip_pos[0] / corr_vec[0], predicted_chip_pos[1] / corr_vec[1]
 
         vec = predicted_chip_pos - mouse_pos_mm    # compute the escape vector first, before using the predicted future chip position
         # an interesting biology question, should the prey's escape strategy depend on it's current position or the predator's predicted future position?
-        
         dist = np.linalg.norm(vec)
+        
         print(f'dist: {dist}')
         print(f'vec: {vec}')
         print(f'state: {state}')
@@ -189,18 +177,25 @@ try:
         print(f'elapsed calculation time: {(perf_counter() - tic) * 1000} ms')
         # actuate gantry
         if control_gantry and dist < trigger_distance:
-            vec_gantry = vec * speed / 1000 / 1.3
+            vec_gantry = vec * speed / 1000 / 1.3   # require a 1.3 correction factor because otherwise the gantry can't move that far in the given time
             gt.send(f'G01 X{-vec_gantry[0]:.2f} Y{-vec_gantry[1]:.2f} F{speed}', wait_for_read=False)  # Note that the coordinate system of the gantry with respect to the camera is flipped
         else:
             vec_gantry = np.zeros((2))
-        gantry_cmd_store.append(vec_gantry)
+        
         gantry_cmd_history[i % gantry_history_length] = vec_gantry
+
+        # record all variables
+        mouse_pos_store.append(mouse_pos_mm)
+        chip_pos_store.append(chip_pos_mm)
+        gantry_cmd_store.append(vec_gantry)
+        chip_pos_raw_store.append(chip_pos_mm)
+
         i += 1
         print(f'elapsed time: {(perf_counter() - tic) * 1000} ms')
-except KeyboardInterrupt:
-    ser.close()
-    # gt.close()
+except KeyboardInterrupt:   # save data when interrupted
     print('interrupted')
+    ser.close()
+    gt.close()
 
     # plot
     mouse_pos_store = np.array(mouse_pos_store)
