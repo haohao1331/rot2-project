@@ -37,7 +37,7 @@ x_max, x_min, y_max, y_min = 270, 45, 210, 30
 sub_corner_distance = 30
 gantry_history_length = 3
 trigger_distance = 120
-output_dir = r'C:\git\rot2-project\data\2024-03-17_SC22\trial6_speed3000'
+output_dir = r'C:\git\rot2-project\data\2024-03-18_SC23\trial3'
 
 # os.mkdir(output_dir)
 
