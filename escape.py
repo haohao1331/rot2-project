@@ -162,7 +162,7 @@ try:
                 x_edge = np.array([-at_x_max, 0]) * 10
                 y_edge = np.array([0, -at_y_max]) * 10
 
-                # project onto tangent, and then project onto edge
+                # project onto tangent
                 tangent_proj = np.dot(vec, tangent)
 
                 if tangent_proj >= 0:

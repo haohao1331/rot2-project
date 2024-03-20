@@ -8,7 +8,8 @@ from enum import Enum
 from datetime import datetime
 import time
 
-arena_corners = np.array([(98, 61), (927, 69), (83, 843), (923, 852)], dtype=np.float32)
+arena_corners = np.array([(98, 61), (927, 69), (83, 843), (923, 852)], dtype=np.float32)    # arena corner in px of the good camera
+
 
 def overlay(df : pd.DataFrame, video_file : Path, output_file : Path, video_end_time : float = None):
     print(f'video end time: {datetime.fromtimestamp(video_end_time)}')
@@ -49,6 +50,11 @@ def overlay(df : pd.DataFrame, video_file : Path, output_file : Path, video_end_
     mouse_pos = np.concatenate((mouse_pos_x.reshape(-1, 1), mouse_pos_y.reshape(-1, 1)), axis=1).astype(int)
     chip_pos = np.concatenate((chip_pos_x.reshape(-1, 1), chip_pos_y.reshape(-1, 1)), axis=1).astype(int)
     chip_raw_pos = np.concatenate((chip_raw_x.reshape(-1, 1), chip_raw_y.reshape(-1, 1)), axis=1).astype(int)
+
+    # vec = np.concatenate((-df['vec_x'].to_numpy().reshape(-1, 1), -df['vec_y'].to_numpy().reshape(-1, 1)), axis=1)
+    distance = df['distance'].to_numpy()
+    gt_vec = np.concatenate((-df['send_signal_x'].to_numpy().reshape(-1, 1), -df['send_signal_y'].to_numpy().reshape(-1, 1)), axis=1) * 5
+    gt_vec = gt_vec.astype(int)
     print(mouse_pos.shape, chip_pos.shape)
     
     # Calculate the homography matrix
@@ -65,8 +71,8 @@ def overlay(df : pd.DataFrame, video_file : Path, output_file : Path, video_end_
         # print(f'{(cur - prev) * 1000} ms')
         # prev = cur
         ret, frame = video.read()
-        # if not ret or frame_i >= 18006:
-        #     break
+        if frame_i >= 3000:
+            break
         if not ret:
             break
         # get the current time of the frame
@@ -88,10 +94,13 @@ def overlay(df : pd.DataFrame, video_file : Path, output_file : Path, video_end_
             continue
         
         # draw a circle on the frame
-        frame = cv2.circle(frame, tuple(cur_mouse_pos), 5, (0, 0, 255), -1)
-        frame = cv2.circle(frame, tuple(cur_chip_pos), 5, (0, 255, 0), -1)
-        frame = cv2.circle(frame, tuple(cur_raw_pos), 5, (255, 0, 0), -1)
+        frame = cv2.circle(frame, tuple(cur_mouse_pos), 5, (0, 0, 255), -1) # mouse position
+        frame = cv2.circle(frame, tuple(cur_chip_pos), 5, (0, 255, 0), -1)  # chip estimate
+        frame = cv2.circle(frame, tuple(cur_raw_pos), 5, (255, 0, 0), -1)   # chip raw
         
+        if gt_vec[nearest_i][0] != 0:
+            frame = cv2.arrowedLine(frame, tuple(cur_chip_pos), tuple(cur_chip_pos + gt_vec[nearest_i] * 4), (0, 0, 255), 3)
+
         # write the frame to the output file
         video_writer.write(frame)
         frame_i += 1
@@ -108,5 +117,5 @@ if __name__ == "__main__":
         dfs.append(pd.read_pickle(log_file))
     df = pd.concat(dfs)
     video_file = Path('/Users/yefan/Desktop/rot2/rot2-project/data/2024-03-14_SC22/test-03142024162021-0000.avi')
-    output_file = Path('/Users/yefan/Desktop/rot2/rot2-project/data/2024-03-14_fast_speed_analysis') / 'overlay.mp4'
+    output_file = Path('/Users/yefan/Desktop/rot2/rot2-project/data/2024-03-16_better_debug') / 'overlay.mp4'
     overlay(df, video_file, output_file, video_end_time=1710460031.2384856)
