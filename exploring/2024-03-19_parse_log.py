@@ -133,10 +133,10 @@ def parse_log(log_file : Path):
     return df
 
 if __name__ == '__main__':
-    log_file = Path(f'/Users/yefan/Desktop/rot2/rot2-project/data/2024-03-18_SC23/trial2/log.txt')
     output_dir = Path('/Users/yefan/Desktop/rot2/rot2-project/data/2024-03-19_trajectory_analysis')
 
-    parse_log(log_file).to_pickle(output_dir / f'03-18_SC23_trial2.pkl')
+    log_file = Path(f'/Users/yefan/Desktop/rot2/rot2-project/data/2024-03-18_SC23/trial3/log.txt')
+    parse_log(log_file).to_pickle(output_dir / f'03-18_SC23_trial3.pkl')
     # df = pd.concat(dfs)
     # df.to_pickle(output_dir / 'concat_trials.pkl')
     
