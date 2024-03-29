@@ -1,3 +1,4 @@
+# Description: Utility functions for working with serial ports and video files
 from pathlib import Path
 import cv2
 
@@ -24,7 +25,11 @@ def print_ports():
             print(f"Error opening port {port.device}")
 
 def concatenate_avi_files(input_files, output_file):
-
+    '''
+    input_files: list of Path objects
+    output_file: Path object
+    this function takes a list of videos and concatenates them
+    '''
     # Create a VideoWriter object to write the output file
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     fps = get_frame_rate(input_files[0])  # Adjust the frame rate as needed

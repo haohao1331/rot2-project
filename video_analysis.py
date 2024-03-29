@@ -1,3 +1,4 @@
+# analyze video for latency test
 import numpy as np
 import cv2
 from pathlib import Path

@@ -1,20 +1,36 @@
+'''
+interface for controlling the gantry, sending g-code commands
+directly running this script and move the gantry manually
+'''
 import serial
 import time
 
 class Gantry:
     def __init__(self, port='COM5', baudrate=115200, timeout=1) -> None:
+        '''
+        port: str, the port that the gantry is connected to, typically COM5 for windows
+        baudrate: int, the baudrate of the serial communication, typically 115200
+        timeout: int, the timeout of the serial communication, typically 1
+        '''
         self.port = port
         self.baudrate = baudrate
         self.timeout = timeout
         self.encoding = 'UTF-8'
         self.ser = serial.Serial(port, baudrate, timeout=timeout)
-        self.ser.write(bytes('\r\n\r\n', 'UTF-8'))
+        self.ser.write(bytes('\r\n\r\n', 'UTF-8'))  # Wake up grbl
         # print(self.ser.read())
         time.sleep(2)   # Wait for grbl to initialize
         self.ser.flushInput()
         self.send('G17 G21 G91 G94')    # select XY plane, millimeters, incremental distance mode, feed rate mode to units per minute
 
     def send(self, msg : str, wait_for_ok=False, wait_for_read=True):
+        '''
+        msg: str, the g-code command to send to the gantry
+        wait_for_ok: bool, whether to wait for the 'ok' response from the gantry, 
+                    this should be set to True if expecting multiple return values from gantry
+        wait_for_read: bool, whether to wait for the response from the gantry,
+                    this should be set to False in the real-time setting because otherwise system will be slow
+        '''
         print(f'send: {msg}')
         self.ser.write(bytes(msg + '\n', self.encoding)) # Send g-code block to grbl
         if wait_for_ok:

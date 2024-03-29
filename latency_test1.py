@@ -1,3 +1,4 @@
+# imporved version of the latency test, where only red/green is sent
 from time import perf_counter
 from gantry import Gantry
 import serial
@@ -13,13 +14,9 @@ a, b, c, d = 0, 0, 0, 0
 
 prev_direction = None
 
-delay = 0.015
-
 while True:
     now = perf_counter()
     
-    # if now - d < delay:
-    #     continue
     print(f'\nwait: {(now - d)*1000}')
 
     data = ser.read(1024)

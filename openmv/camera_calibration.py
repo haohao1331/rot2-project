@@ -1,11 +1,14 @@
+# this script is used to calibrate the camera
 import sensor
 import omv
 
+# initialize sensors
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
 sensor.set_framesize(sensor.QVGA)
 sensor.skip_frames(time=2000)
 
+# just to make the picture more clear
 sensor.set_contrast(3)
 sensor.set_saturation(3)
 sensor.set_brightness(0)
@@ -15,20 +18,14 @@ print(sensor.get_exposure_us())
 
 #omv.disable_fb(True)
 
-#img = sensor.snapshot()
-#img.save("test.jpg")
-
-#img_corr = img.lens_corr(1.8)
-#img_corr.save("test_corr.jpg")
-
 # top left, top right, bottom right, bottom left
-points = [(46, 10), (291, 6), (287, 235), (52, 228)]    # for QVGA
-#points = [(24, 4), (145, 4), (142, 118), (25, 114)]     # for QQVGA
+points = [(46, 10), (291, 6), (287, 235), (52, 228)]    # for QVGA, four corners of the arena
+#points = [(24, 4), (145, 4), (142, 118), (25, 114)]     # for QQVGA, four corners of the arena
 
-black_filter = (0, 30, -128, 127, -128, 127)
-debug_black_filter = (0, 38, -128, 8, -128, 127)
-red_filter = (0, 100, 25, 127, -128, 127)
-mouse_filter = (0, 26, -35, 42, -32, 43)
+black_filter = (0, 30, -128, 127, -128, 127)    # for detecting black puck
+debug_black_filter = (0, 38, -128, 8, -128, 127)    # for detecting piece of duck tape stuck on magnet, debugging only
+red_filter = (0, 100, 25, 127, -128, 127)   # for detecting red puck
+mouse_filter = (0, 26, -35, 42, -32, 43)    # for detecting mouse
 
 edges = [(274, 226), (40, 227), (36, 9), (279, 11)]
 

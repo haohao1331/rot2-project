@@ -1,7 +1,17 @@
+# Description: Kalman filter implementation
 import numpy as np
 
 class KalmanFilter:
     def __init__(self, x0, P, A, B, H, Q, R):
+        '''
+        x0: np.array, initial state
+        P: np.array, initial uncertainty covariance
+        A: np.array, state transition matrix
+        B: np.array, control input matrix
+        H: np.array, Measurement matrix
+        Q: np.array, process noise covariance
+        R: np.array, measurement noise covariance
+        '''
         self.x = x0 # state
         self.P = P  # uncertainty covariance
         self.A = A  # state transition matrix

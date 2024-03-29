@@ -1,3 +1,4 @@
+# generate a video that alternates between red and green, used for latency test
 import cv2
 import numpy as np
 

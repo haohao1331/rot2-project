@@ -1,3 +1,4 @@
+# interface with openmv, only used in latency_test.py
 import openmv.rpc as rpc
 import struct
 from time import perf_counter

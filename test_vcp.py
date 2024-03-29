@@ -1,3 +1,4 @@
+# Description: Test the virtual com port communication
 import serial
 import utils
 

@@ -1,3 +1,4 @@
+# a crude version of the latency test, where the entire image is sent
 import io
 from pathlib import Path
 from time import perf_counter

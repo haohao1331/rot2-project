@@ -1,3 +1,4 @@
+# Description: This script reads images from a directory and determines if the dominant color is red or green.
 import cv2
 import numpy as np
 from pathlib import Path
